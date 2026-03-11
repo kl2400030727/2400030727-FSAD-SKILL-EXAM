@@ -1,6 +1,5 @@
 package com.klef.fsad.exam;
 
-
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
@@ -9,6 +8,8 @@ import org.hibernate.query.Query;
 import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
+import java.text.SimpleDateFormat;
+import java.text.ParseException;
 
 public class ClientDemo {
     
@@ -17,7 +18,7 @@ public class ClientDemo {
     
     public static void main(String[] args) {
         try {
-            // Create SessionFactory
+            // Create SessionFactory directly - this will create tables automatically
             sessionFactory = new Configuration()
                     .configure("hibernate.cfg.xml")
                     .buildSessionFactory();
@@ -26,7 +27,7 @@ public class ClientDemo {
             
             while (true) {
                 System.out.println("\nChoose an operation:");
-                System.out.println("1. Insert Movie Records");
+                System.out.println("1. Insert Movie Records (Manual Entry)");
                 System.out.println("2. View All Movies");
                 System.out.println("3. Update Movie Name and Status by ID (HQL with positional parameters)");
                 System.out.println("4. Search Movies by Status");
@@ -72,7 +73,7 @@ public class ClientDemo {
         }
     }
     
-    // I. Insert records using persistent object
+    // I. Insert records manually by typing in console
     private static void insertMovies() {
         Session session = null;
         Transaction transaction = null;
@@ -81,32 +82,56 @@ public class ClientDemo {
             session = sessionFactory.openSession();
             transaction = session.beginTransaction();
             
-            // Create multiple movie objects
-            Movie movie1 = new Movie("Inception", new Date(), "Released", "Christopher Nolan", 
-                                     8.8, 148, "English");
+            System.out.print("How many movies do you want to insert? ");
+            int numMovies = scanner.nextInt();
+            scanner.nextLine(); // Consume newline
             
-            Movie movie2 = new Movie("The Dark Knight", new Date(), "Blockbuster", "Christopher Nolan", 
-                                     9.0, 152, "English");
-            
-            Movie movie3 = new Movie("3 Idiots", new Date(), "Blockbuster", "Rajkumar Hirani", 
-                                     8.4, 170, "Hindi");
-            
-            Movie movie4 = new Movie("Parasite", new Date(), "Released", "Bong Joon-ho", 
-                                     8.6, 132, "Korean");
-            
-            Movie movie5 = new Movie("Dangal", new Date(), "Hit", "Nitesh Tiwari", 
-                                     8.4, 161, "Hindi");
-            
-            // Save the movies (persistent objects)
-            session.save(movie1);
-            session.save(movie2);
-            session.save(movie3);
-            session.save(movie4);
-            session.save(movie5);
+            for (int i = 0; i < numMovies; i++) {
+                System.out.println("\n--- Enter details for Movie " + (i + 1) + " ---");
+                
+                System.out.print("Enter Movie Name: ");
+                String name = scanner.nextLine();
+                
+                System.out.print("Enter Director Name: ");
+                String director = scanner.nextLine();
+                
+                System.out.print("Enter Language: ");
+                String language = scanner.nextLine();
+                
+                System.out.print("Enter Status (Released/Blockbuster/Upcoming/Hit): ");
+                String status = scanner.nextLine();
+                
+                System.out.print("Enter Rating (0-10): ");
+                Double rating = scanner.nextDouble();
+                
+                System.out.print("Enter Duration (in minutes): ");
+                Integer duration = scanner.nextInt();
+                scanner.nextLine(); // Consume newline
+                
+                System.out.print("Enter Release Date (yyyy-MM-dd): ");
+                String dateStr = scanner.nextLine();
+                
+                // Parse the date
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                Date releaseDate = sdf.parse(dateStr);
+                
+                // Create movie object
+                Movie movie = new Movie(name, releaseDate, status, director, 
+                                        rating, duration, language);
+                
+                // Save the movie
+                session.save(movie);
+                System.out.println("Movie " + (i + 1) + " added successfully!");
+            }
             
             transaction.commit();
-            System.out.println("5 movie records inserted successfully!");
+            System.out.println("\n" + numMovies + " movie record(s) inserted successfully!");
             
+        } catch (ParseException e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
+            System.err.println("Error: Invalid date format. Please use yyyy-MM-dd");
         } catch (Exception e) {
             if (transaction != null) {
                 transaction.rollback();
@@ -168,8 +193,7 @@ public class ClientDemo {
             System.out.print("Enter new Movie Status (Released/Blockbuster/Upcoming/Hit): ");
             String newStatus = scanner.nextLine();
             
-            // HQL with positional parameters (using ?1, ?2 format)
-            // Note: In Hibernate 5, positional parameters use ?1, ?2, etc.
+            // HQL with positional parameters
             String hql = "UPDATE Movie SET name = ?1, status = ?2 WHERE id = ?3";
             
             Query query = session.createQuery(hql);
